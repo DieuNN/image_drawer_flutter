@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
@@ -72,6 +73,8 @@ class _PainterState extends State<Painter> {
     _finished = false;
     painterController._widgetFinish = _finish;
     isEnableDoneBtn = true;
+
+    log(widget.imageFile.path);
   }
 
   Size _finish() {
@@ -92,10 +95,14 @@ class _PainterState extends State<Painter> {
     if (!_finished!) {
       child = GestureDetector(
         child: child,
-        onPanDown: (val){
-          _onPanStart(DragStartDetails(localPosition: val.localPosition,globalPosition: val.globalPosition));
-          _onPanUpdate(DragUpdateDetails(localPosition: val.localPosition,globalPosition: val.globalPosition));
-          },
+        onPanDown: (val) {
+          _onPanStart(DragStartDetails(
+              localPosition: val.localPosition,
+              globalPosition: val.globalPosition));
+          _onPanUpdate(DragUpdateDetails(
+              localPosition: val.localPosition,
+              globalPosition: val.globalPosition));
+        },
         onPanCancel: () => _onPanEnd(DragEndDetails()),
         onPanStart: _onPanStart,
         onPanUpdate: _onPanUpdate,
@@ -200,8 +207,7 @@ class _PainterState extends State<Painter> {
                           }).toList(),
                         ),
                         Visibility(
-                            visible: _isShowLoading,
-                            child: LoadingWidget()),
+                            visible: _isShowLoading, child: LoadingWidget()),
                       ],
                     ),
                   ),
@@ -401,7 +407,8 @@ class _PainterState extends State<Painter> {
   }
 
   void _onPanStart(DragStartDetails start) {
-    Offset pos = (context.findRenderObject() as RenderBox).globalToLocal(start.globalPosition);
+    Offset pos = (context.findRenderObject() as RenderBox)
+        .globalToLocal(start.globalPosition);
     painterController._pathHistory.add(pos);
     painterController._notifyListeners();
   }
@@ -426,18 +433,26 @@ class _PainterState extends State<Painter> {
     screenshotController
         .capture(delay: Duration(milliseconds: 5))
         .then((capturedImage) async {
-      final image = File.fromRawPath(capturedImage ?? Uint8List(0));
+      if (capturedImage == null) {
+        return;
+      }
+
+      final tempDir = await getTemporaryDirectory();
+
+      File image = await File(
+              "${tempDir.path}/${DateTime.now().millisecondsSinceEpoch.toString()}.png")
+          .create();
+
+      image.writeAsBytesSync(capturedImage.toList());
+
       setState(() {
         _imageFile = image;
       });
       setState(() {
         _isShowLoading = !_isShowLoading;
       });
-      final paths = await getApplicationDocumentsDirectory();
-      image.copy(paths.path +
-          '/' +
-          DateTime.now().millisecondsSinceEpoch.toString() +
-          '.png');
+
+      print(_imageFile.absolute.path);
       print('Image link: $image');
       Navigator.pop(context, capturedImage);
       setState(() {
@@ -504,7 +519,7 @@ class _PathHistory {
     if (!_inDrag) {
       _inDrag = true;
       Path path = Path();
-      path.moveTo(startPoint.dx -20, startPoint.dy -20);
+      path.moveTo(startPoint.dx - 20, startPoint.dy - 20);
       _paths.add(MapEntry<Path, Paint>(path, currentPaint));
     }
   }
